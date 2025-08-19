@@ -75,17 +75,21 @@ export class DiagnosticQueriesTool implements Tool {
         try {
           const request = new sql.Request();
           const result = await request.batch(batchText);
-          const recordsets: any[] = result.recordsets || [];
-          const rowCounts: number[] = recordsets.map((rs: any) => (Array.isArray(rs) ? rs.length : 0));
+          const recordsetsArray: any[] = Array.isArray((result as any).recordsets)
+            ? (result as any).recordsets
+            : (result && (result as any).recordsets && typeof (result as any).recordsets === 'object')
+              ? Object.values((result as any).recordsets)
+              : [];
+          const rowCounts: number[] = recordsetsArray.map((rs: any) => (Array.isArray(rs) ? rs.length : 0));
           // Collect a small sample: first recordset up to maxRowsPerResult
-          const sample = recordsets.length > 0 && Array.isArray(recordsets[0])
-            ? recordsets[0].slice(0, Math.max(0, Math.min(maxRowsPerResult, 1000)))
+          const sample = recordsetsArray.length > 0 && Array.isArray(recordsetsArray[0])
+            ? recordsetsArray[0].slice(0, Math.max(0, Math.min(maxRowsPerResult, 1000)))
             : [];
 
           batchSummaries.push({
             batchIndex: i,
             statementPreview: preview,
-            recordsetCount: recordsets.length,
+            recordsetCount: recordsetsArray.length,
             rowCounts,
             sampleData: sample
           });

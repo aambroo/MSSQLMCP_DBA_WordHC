@@ -29,6 +29,10 @@ import { IndexUsageStatsTool } from "./tools/IndexUsageStatsTool.js";
 import { QueryPlanTool } from "./tools/QueryPlanTool.js";
 import { StatisticsUpdateTool } from "./tools/StatisticsUpdateTool.js";
 import { WaitStatsTool } from "./tools/WaitStatsTool.js";
+import { CreateAlertsTool } from "./tools/CreateAlertsTool.js";
+import { DiagnosticQueriesTool } from "./tools/DiagnosticQueriesTool.js";
+import { MaintenanceSolutionTool } from "./tools/MaintenanceSolutionTool.js";
+import { HealthCheckReportTool } from "./tools/HealthCheckReportTool.js";
 
 // Import partition tools
 import { 
@@ -107,6 +111,10 @@ const indexUsageStatsTool = new IndexUsageStatsTool();
 const queryPlanTool = new QueryPlanTool();
 const statisticsUpdateTool = new StatisticsUpdateTool();
 const waitStatsTool = new WaitStatsTool();
+const createAlertsTool = new CreateAlertsTool();
+const diagnosticQueriesTool = new DiagnosticQueriesTool();
+const maintenanceSolutionTool = new MaintenanceSolutionTool();
+const healthCheckReportTool = new HealthCheckReportTool();
 
 // Initialize partition tools
 const createPartitionFunctionTool = new CreatePartitionFunctionTool();
@@ -149,7 +157,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             ioHotspotsTool,
             indexUsageStatsTool,
             queryPlanTool,
-            waitStatsTool
+            waitStatsTool,
+            healthCheckReportTool
         ]
         : [
             // All tools including write operations
@@ -182,7 +191,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             indexUsageStatsTool,
             queryPlanTool,
             statisticsUpdateTool,
-            waitStatsTool
+            waitStatsTool,
+            createAlertsTool
         ],
 }));
 
@@ -286,6 +296,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             case waitStatsTool.name:
                 result = await waitStatsTool.run(args);
                 break;
+            case createAlertsTool.name:
+                result = await createAlertsTool.run(args);
+                break;
+            case diagnosticQueriesTool.name:
+                result = await diagnosticQueriesTool.run(args);
+                break;
+            case maintenanceSolutionTool.name:
+                result = await maintenanceSolutionTool.run(args);
+                break;
+            case healthCheckReportTool.name:
+                result = await healthCheckReportTool.run(args);
+                break;
             default:
                 return {
                     content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -382,5 +404,9 @@ function wrapToolRun(tool: any) {
     indexUsageStatsTool,
     queryPlanTool,
     statisticsUpdateTool,
-    waitStatsTool
+    waitStatsTool,
+    createAlertsTool,
+    diagnosticQueriesTool,
+    maintenanceSolutionTool,
+    healthCheckReportTool
 ].forEach(wrapToolRun);

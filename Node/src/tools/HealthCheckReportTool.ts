@@ -210,7 +210,7 @@ export class HealthCheckReportTool implements Tool {
       ].join("\n");
     })();
 
-    const perfIOStalls: Section = (() => storageLatency.replace("### Latenze", "## IO Stalls per database file"));
+    const perfIOStalls: Section = storageLatency.replace("### Latenze", "## IO Stalls per database file");
 
     const perfCPU: Section = (() => {
       const headers = ["Database", "CPU Time (ms)"];
@@ -277,7 +277,7 @@ export class HealthCheckReportTool implements Tool {
       ].join("\n");
     })();
 
-    const perfIndexState: Section = (() => indexStats.replace("## Manutenzione indici e statistiche", "## Stato degli indici"));
+    const perfIndexState: Section = indexStats.replace("## Manutenzione indici e statistiche", "## Stato degli indici");
 
     const perfDeadlocks: Section = (() => {
       const c = (deadlockCount[0]?.deadlock_count) ?? 0;

@@ -6,6 +6,8 @@ import { WaitStatsTool } from "./WaitStatsTool.js";
 import { IndexUsageStatsTool } from "./IndexUsageStatsTool.js";
 import { AgentJobHealthTool } from "./AgentJobHealthTool.js";
 import { IOHotspotsTool } from "./IOHotspotsTool.js";
+import { writeFile } from "fs/promises";
+import { join } from "path";
 
 type Section = string;
 
@@ -44,6 +46,16 @@ export class HealthCheckReportTool implements Tool {
   inputSchema = {
     type: "object",
     properties: {
+      saveToFile: {
+        type: "boolean",
+        description: "Se true, salva il report in un file Markdown (default: false)",
+        default: false
+      },
+      outputPath: {
+        type: "string",
+        description: "Percorso dove salvare il file (default: ./health_check_report.md)",
+        default: "./health_check_report.md"
+      },
       includeWhoIsActive: {
         type: "boolean",
         description: "Se true, tenta di includere informazioni da sp_WhoIsActive se disponibile",
@@ -59,7 +71,13 @@ export class HealthCheckReportTool implements Tool {
   } as any;
 
   async run(params: any) {
-    const topRows: number = Math.max(1, Math.min(100, params?.topRows ?? 20));
+    const {
+      saveToFile = false,
+      outputPath = "./health_check_report.md",
+      topRows: topRowsParam = 20
+    } = params || {};
+
+    const topRows: number = Math.max(1, Math.min(100, topRowsParam));
 
     // Instantiate existing tools we will leverage
     const dbStatusTool = new DatabaseStatusTool();
@@ -338,11 +356,42 @@ export class HealthCheckReportTool implements Tool {
       perfDeadlocks
     ].join("\n\n");
 
-    return {
+    const result: {
+      success: boolean;
+      message: string;
+      reportMarkdown: string;
+      reportLength: number;
+      sections: string[];
+      savedToFile?: string;
+      saveError?: string;
+    } = {
       success: true,
       message: "Report di Health Check generato",
-      reportMarkdown: report
+      reportMarkdown: report,
+      reportLength: report.length,
+      sections: [
+        "Overview del sistema",
+        "Configurazione dei database", 
+        "Manutenzione dei database",
+        "Performance"
+      ]
     };
+
+    // Save to file if requested
+    if (saveToFile) {
+      try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = outputPath.replace('.md', `_${timestamp}.md`);
+        await writeFile(filename, report, 'utf8');
+        result.savedToFile = filename;
+        result.message += ` - Salvato in ${filename}`;
+      } catch (err: any) {
+        result.saveError = err?.message || String(err);
+        result.message += " - Errore nel salvataggio del file";
+      }
+    }
+
+    return result;
   }
 }
 

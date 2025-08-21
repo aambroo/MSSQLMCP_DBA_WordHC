@@ -9,13 +9,17 @@ export class sp_BlitzTool implements Tool {
   inputSchema = {
     type: "object",
     properties: {
+      Help: {
+        type: "boolean",
+        description: "Mostra l'help di sp_Blitz (default: false)"
+      },
       CheckUserDatabaseObjects: {
         type: "boolean",
-        description: "Check user database objects for common issues (default: true)"
+        description: "Controlla oggetti dei database utente (default: true)"
       },
       CheckProcedureCache: {
         type: "boolean", 
-        description: "Check procedure cache for performance issues (default: true)"
+        description: "Controlla il procedure cache per problemi di performance (default: false)"
       },
       OutputType: {
         type: "string",
@@ -28,11 +32,31 @@ export class sp_BlitzTool implements Tool {
       },
       CheckServerInfo: {
         type: "boolean",
-        description: "Include server configuration information (default: true)"
+        description: "Include server configuration information (default: false)"
       },
-      CheckVersionStore: {
+      OutputProcedureCache: {
         type: "boolean",
-        description: "Check version store for issues (default: true)"
+        description: "Include i risultati del controllo della procedure cache (default: false)"
+      },
+      CheckProcedureCacheFilter: {
+        type: "string",
+        description: "Filtro per i controlli del procedure cache (es. 'ALL', 'SP')"
+      },
+      SkipChecksServer: {
+        type: "string",
+        description: "Server name pattern to skip during checks"
+      },
+      SkipChecksDatabase: {
+        type: "string",
+        description: "Database name pattern to skip during checks"
+      },
+      SkipChecksSchema: {
+        type: "string", 
+        description: "Schema name pattern to skip during checks"
+      },
+      SkipChecksTable: {
+        type: "string",
+        description: "Table name pattern to skip during checks"
       },
       IgnorePrioritiesBelow: {
         type: "integer",
@@ -58,45 +82,37 @@ export class sp_BlitzTool implements Tool {
         type: "string",
         description: "Table name for saving results"
       },
-      ConfigurationDatabaseName: {
-        type: "string",
-        description: "Database containing sp_Blitz configuration"
-      },
-      ConfigurationSchemaName: {
-        type: "string",
-        description: "Schema containing sp_Blitz configuration"
-      },
-      ConfigurationTableName: {
-        type: "string",
-        description: "Table containing sp_Blitz configuration"
-      },
-      Help: {
+      OutputXMLasNVARCHAR: {
         type: "boolean",
-        description: "Show help information for sp_Blitz (default: false)"
+        description: "Restituisce XML come NVARCHAR (default: false)"
+      },
+      EmailRecipients: {
+        type: "string",
+        description: "Lista di destinatari email (se configurato)"
+      },
+      EmailProfile: {
+        type: "string",
+        description: "Nome del profilo Database Mail da usare"
+      },
+      SummaryMode: {
+        type: "boolean",
+        description: "Mostra solo il riepilogo dei risultati (default: false)"
       },
       Debug: {
         type: "boolean",
         description: "Enable debug mode for troubleshooting (default: false)"
       },
-      SummaryMode: {
+      UsualDBOwner: {
+        type: "string",
+        description: "Proprietario DB considerato 'normale' per i controlli"
+      },
+      SkipBlockingChecks: {
         type: "boolean",
-        description: "Show only summary of findings (default: false)"
+        description: "Salta i controlli di blocking (default: true)"
       },
-      SkipChecksServer: {
-        type: "string",
-        description: "Server name pattern to skip during checks"
-      },
-      SkipChecksDatabase: {
-        type: "string",
-        description: "Database name pattern to skip during checks"
-      },
-      SkipChecksSchema: {
-        type: "string", 
-        description: "Schema name pattern to skip during checks"
-      },
-      SkipChecksTable: {
-        type: "string",
-        description: "Table name pattern to skip during checks"
+      VersionCheckMode: {
+        type: "boolean",
+        description: "Esegue la modalità controllo versione (default: false)"
       }
     },
     required: []
@@ -104,28 +120,32 @@ export class sp_BlitzTool implements Tool {
 
   async run(params: any) {
     const {
+      Help = false,
       CheckUserDatabaseObjects = true,
-      CheckProcedureCache = true,
+      CheckProcedureCache = false,
       OutputType = "TABLE",
       OutputServerName,
-      CheckServerInfo = true,
-      CheckVersionStore = true,
+      CheckServerInfo = false,
+      OutputProcedureCache = false,
+      CheckProcedureCacheFilter,
       IgnorePrioritiesBelow,
       IgnorePrioritiesAbove,
       BringThePain = false,
       OutputDatabaseName,
       OutputSchemaName,
       OutputTableName,
-      ConfigurationDatabaseName,
-      ConfigurationSchemaName,
-      ConfigurationTableName,
-      HelpMe = false,
-      Debug = false,
+      OutputXMLasNVARCHAR = false,
+      EmailRecipients,
+      EmailProfile,
       SummaryMode = false,
+      Debug = false,
       SkipChecksServer,
       SkipChecksDatabase,
       SkipChecksSchema,
-      SkipChecksTable
+      SkipChecksTable,
+      UsualDBOwner,
+      SkipBlockingChecks = true,
+      VersionCheckMode = false
     } = params;
 
     try {
@@ -147,28 +167,32 @@ export class sp_BlitzTool implements Tool {
         }
       };
 
+      addParam("Help", Help);
       addParam("CheckUserDatabaseObjects", CheckUserDatabaseObjects);
       addParam("CheckProcedureCache", CheckProcedureCache);
       addParam("OutputType", OutputType, true);
       addParam("OutputServerName", OutputServerName, true);
       addParam("CheckServerInfo", CheckServerInfo);
-      addParam("CheckVersionStore", CheckVersionStore);
+      addParam("OutputProcedureCache", OutputProcedureCache);
+      addParam("CheckProcedureCacheFilter", CheckProcedureCacheFilter, true);
       addParam("IgnorePrioritiesBelow", IgnorePrioritiesBelow);
       addParam("IgnorePrioritiesAbove", IgnorePrioritiesAbove);
       addParam("BringThePain", BringThePain);
       addParam("OutputDatabaseName", OutputDatabaseName, true);
       addParam("OutputSchemaName", OutputSchemaName, true);
       addParam("OutputTableName", OutputTableName, true);
-      addParam("ConfigurationDatabaseName", ConfigurationDatabaseName, true);
-      addParam("ConfigurationSchemaName", ConfigurationSchemaName, true);
-      addParam("ConfigurationTableName", ConfigurationTableName, true);
-      addParam("HelpMe", HelpMe);
+      addParam("OutputXMLasNVARCHAR", OutputXMLasNVARCHAR);
+      addParam("EmailRecipients", EmailRecipients, true);
+      addParam("EmailProfile", EmailProfile, true);
       addParam("Debug", Debug);
       addParam("SummaryMode", SummaryMode);
       addParam("SkipChecksServer", SkipChecksServer, true);
       addParam("SkipChecksDatabase", SkipChecksDatabase, true);
       addParam("SkipChecksSchema", SkipChecksSchema, true);
       addParam("SkipChecksTable", SkipChecksTable, true);
+      addParam("UsualDBOwner", UsualDBOwner, true);
+      addParam("SkipBlockingChecks", SkipBlockingChecks);
+      addParam("VersionCheckMode", VersionCheckMode);
 
       // Add parameters to query if any exist
       if (queryParams.length > 0) {
